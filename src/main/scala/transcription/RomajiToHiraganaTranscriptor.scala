@@ -1,7 +1,7 @@
 package transcription
 
+import scala.annotation.tailrec
 import scala.collection.immutable.HashMap
-import scala.collection.mutable.ListBuffer
 
 object RomajiToHiraganaTranscriptor {
   private val ROMAJI_TO_HIRAGANA = HashMap(
@@ -55,33 +55,69 @@ object RomajiToHiraganaTranscriptor {
     "n" -> "ん",
   )
 
-  def transcript(romaji: String): String = {
-    fromTokenisedRomajiToHiragana(tokenise(romaji))
-  }
+  private val VOWELS = Set('a', 'i', 'u', 'e', 'o')
+  private val VALID_CONSONANTS_WITHOUT_N = Set('k', 's', 'h', 't', 'c', 'f', 'm', 'y', 'r', 'w')
+  private val VALID_CONSONANTS = VALID_CONSONANTS_WITHOUT_N + 'n'
 
-  private def fromTokenisedRomajiToHiragana(tokenisedRomaji: List[String]): String = {
+  def transcript(romaji: String): String =
+    fromTokenisedRomajiToHiragana(tokenise(romaji))
+
+  private def fromTokenisedRomajiToHiragana(tokenisedRomaji: List[String]): String =
     tokenisedRomaji.map(syllable => ROMAJI_TO_HIRAGANA.getOrElse(syllable, syllable)).mkString("")
-  }
 
   private def tokenise(romaji: String): List[String] = {
-    val romajiLowerCase = romaji.toLowerCase()
-   if (romajiLowerCase == "konnichiwa") {
-      List("ko", "n", "ni", "chi", "wa")
-    } else if(romajiLowerCase.length > 1)  {
-      val charWithIndex = romajiLowerCase.zipWithIndex
-      val tokenised: ListBuffer[String] = ListBuffer()
-      for ((char, index) <- charWithIndex) {
-        if(!List('a', 'u', 'i', 'e', 'o').contains(char)) {
-          val nextChar = charWithIndex(index + 1)
-          val isVowel = List('a', 'u', 'i', 'e', 'o').contains(nextChar._1)
-          if (isVowel) {
-            tokenised += s"$char${nextChar._1}"
-          }
-        }
+    @tailrec
+    def tokeniseWithAccumulator(romajiAsChars: List[Char], currentSyllables: List[String]): List[String] =
+      romajiAsChars match {
+        case Nil => currentSyllables
+        case Nil :+ lastChar if isValidConsonant(lastChar) && currentSyllables.nonEmpty =>
+          tokeniseWithAccumulator(
+            List.empty,
+            prependInSyllablesLastCharWithFirstSyllable(currentSyllables, lastChar),
+          )
+        case Nil :+ lastChar =>
+          tokeniseWithAccumulator(
+            List.empty,
+            prependInSyllablesLastCharAsSyllable(currentSyllables, lastChar),
+          )
+        case previousChars :+ penultimateChar :+ lastChar if isValidConsonant(penultimateChar) && isVowel(lastChar) =>
+          tokeniseWithAccumulator(
+            previousChars,
+            prependInSyllablesNewSyllable(currentSyllables, penultimateChar, lastChar),
+          )
+        case previousChars :+ lastChar if isValidConsonantWithoutN(lastChar) && currentSyllables.nonEmpty =>
+          tokeniseWithAccumulator(
+            previousChars,
+            prependInSyllablesLastCharWithFirstSyllable(currentSyllables, lastChar),
+          )
+        case previousChars :+ lastChar =>
+          tokeniseWithAccumulator(
+            previousChars,
+            prependInSyllablesLastCharAsSyllable(currentSyllables, lastChar),
+          )
       }
-      tokenised.toList
-    } else {
-      List(romajiLowerCase)
-    }
+    tokeniseWithAccumulator(romaji.toLowerCase.toList, List.empty)
   }
+
+  private def isValidConsonant(char: Char): Boolean = VALID_CONSONANTS.contains(char)
+
+  private def isValidConsonantWithoutN(char: Char): Boolean = VALID_CONSONANTS_WITHOUT_N.contains(char)
+
+  private def isVowel(char: Char): Boolean = VOWELS.contains(char)
+
+  private def prependInSyllablesLastCharWithFirstSyllable(
+      currentSyllables: List[String],
+      lastChar: Char,
+  ): List[String] =
+    lastChar.toString + currentSyllables.head :: currentSyllables.tail
+
+  private def prependInSyllablesLastCharAsSyllable(currentSyllables: List[String], lastChar: Char): List[String] =
+    lastChar.toString :: currentSyllables
+
+  private def prependInSyllablesNewSyllable(
+      currentSyllables: List[String],
+      penultimateChar: Char,
+      lastChar: Char,
+  ): List[String] =
+    penultimateChar.toString + lastChar.toString :: currentSyllables
 }
