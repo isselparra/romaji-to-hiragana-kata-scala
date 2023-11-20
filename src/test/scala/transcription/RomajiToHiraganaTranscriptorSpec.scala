@@ -13,11 +13,20 @@ class RomajiToHiraganaTranscriptorSpec extends AnyFlatSpec with Matchers {
   it should "return transcription x -> x" in {
     RomajiToHiraganaTranscriptor.transcript("x") shouldBe "x"
   }
+  it should "return transcription chi -> ち" in {
+    RomajiToHiraganaTranscriptor.transcript("chi") shouldBe "ち"
+  }
   it should "return transcription neko -> ねこ" in {
     RomajiToHiraganaTranscriptor.transcript("neko") shouldBe "ねこ"
   }
   it should "return transcription tori -> とり" in {
     RomajiToHiraganaTranscriptor.transcript("tori") shouldBe "とり"
+  }
+  it should "return transcription nana -> なな" in {
+    RomajiToHiraganaTranscriptor.transcript("nana") shouldBe "なな"
+  }
+  it should "return transcription Sonna -> そんな" in {
+    RomajiToHiraganaTranscriptor.transcript("Sonna") shouldBe "そんな"
   }
   it should "return transcription Konnichiwa -> こんにちわ" in {
     RomajiToHiraganaTranscriptor.transcript("Konnichiwa") shouldBe "こんにちわ"
